@@ -36,6 +36,7 @@ llm = LLM(
     swap_space=2,  # Add swap space for memory overflow
     enforce_eager=True,  # Use eager execution for better memory management
     disable_log_stats=True,  # Disable vLLM progress logs
+    disable_progress_bar=True,
 )
 
 sampling_params = SamplingParams(
@@ -391,15 +392,9 @@ for i in tqdm(range(start_idx, len(messages), BSZ), desc="Processing qwen filter
                 "mm_processor_kwargs": {},
             })
 
-        # Temporarily disable tqdm to prevent vLLM progress bars
-        import tqdm as original_tqdm
-        original_tqdm.tqdm.disable = True
-        
-        outputs = llm.generate(llm_inputs, sampling_params=sampling_params)
+        outputs = llm.generate(llm_inputs, sampling_params=sampling_params, show_progress=False)
         batch_output_text = [out.outputs[0].text for out in outputs]
         
-        # Re-enable tqdm
-        original_tqdm.tqdm.disable = False
         
     except Exception as e:
         print(f'Error processing batch starting at {i}: {e}')
