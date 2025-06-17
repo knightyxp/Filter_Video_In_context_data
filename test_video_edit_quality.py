@@ -60,7 +60,7 @@ def create_video_comparison_prompt():
 
 Please evaluate the following aspects:
 
-1. **Editing Success**: Was the editing operation successfully applied? What changes can you observe between the original and edited video?
+1. **Editing Success**: Was the editing operation "Add the woman." successfully applied? What changes can you observe between the original and edited video?
 
 2. **Video Quality**: How is the overall quality of the edited video compared to the original? Consider factors like:
    - Visual clarity and sharpness
@@ -277,15 +277,16 @@ def main():
         traceback.print_exc()
         return
     
-    # Clean up temporary frames
-    print("\nCleaning up temporary frames...")
-    import shutil
-    try:
-        shutil.rmtree(FRAMES_DIR)
-        print("Temporary frames cleaned up successfully")
-    except Exception as e:
-        print(f"Error cleaning up temporary frames: {e}")
+    # Clean up temporary frames - COMMENTED OUT TO KEEP FRAMES FOR INSPECTION
+    # print("\nCleaning up temporary frames...")
+    # import shutil
+    # try:
+    #     shutil.rmtree(FRAMES_DIR)
+    #     print("Temporary frames cleaned up successfully")
+    # except Exception as e:
+    #     print(f"Error cleaning up temporary frames: {e}")
     
+    print(f"\nTemporary frames saved in: {FRAMES_DIR}")
     print("Video evaluation completed!")
 
 if __name__ == "__main__":
