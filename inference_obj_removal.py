@@ -24,6 +24,7 @@ llm = LLM(
     swap_space=2,  # Add swap space for memory overflow
     enforce_eager=True,  # Use eager execution for better memory management
     disable_log_stats=True,  # Disable vLLM progress logs
+    use_tqdm=False,
 )
 
 sampling_params = SamplingParams(
@@ -129,7 +130,7 @@ for i in tqdm(range(start_idx, len(messages), BSZ), desc="Processing qwen filter
                 "mm_processor_kwargs": {},
             })
 
-        outputs = llm.generate(llm_inputs, sampling_params=sampling_params, show_progress=False)
+        outputs = llm.generate(llm_inputs, sampling_params=sampling_params, use_tqdm=False)
         batch_output_text = [out.outputs[0].text for out in outputs]
         
         
