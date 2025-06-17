@@ -24,7 +24,6 @@ llm = LLM(
     swap_space=2,  # Add swap space for memory overflow
     enforce_eager=True,  # Use eager execution for better memory management
     disable_log_stats=True,  # Disable vLLM progress logs
-    use_tqdm=False,
 )
 
 sampling_params = SamplingParams(
