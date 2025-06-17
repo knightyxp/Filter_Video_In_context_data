@@ -173,7 +173,7 @@ def extract_evaluation_results(text):
 def main():
     # Set up paths
     ORG_VIDEO = "test_video.mp4"
-    EDITED_VIDEO = "test_edited_video.mp4"
+    EDITED_VIDEO = "test_org_video.mp4"
     FRAMES_DIR = "temp_video_frames"
     OUTPUT_PATH = "video_editing_evaluation.json"
     
