@@ -7,9 +7,15 @@ import torch
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import multiprocessing as mp
 import glob
+import datetime
 
 # Disable vLLM progress bars
 os.environ["VLLM_DISABLE_PROGRESS_BAR"] = "1"
+# Disable tokenizers parallelism warnings
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+# Additional vLLM environment variables to disable progress bars
+os.environ["VLLM_LOGGING_LEVEL"] = "ERROR"
+os.environ["VLLM_DISABLE_LOG_STATS"] = "1"
 
 from transformers import AutoProcessor, AutoTokenizer
 from vllm import LLM, SamplingParams
@@ -37,6 +43,7 @@ sampling_params = SamplingParams(
     top_p=0.001,
     max_tokens=256,
     stop_token_ids=[],
+    skip_special_tokens=True,
 )
 
 processor = AutoProcessor.from_pretrained(MODEL_PATH)
@@ -169,6 +176,8 @@ def process_single_sample_for_frames(args):
 INPUT_PATH = "/scratch3/yan204/yxp/Filter_Video_In_context_data/filter_resolution_json/filtered_obj_addition_592x336.json"
 OUTPUT_PATH = "/scratch3/yan204/yxp/Senorita/hq_obj_addition.json"
 FRAMES_DIR = "/scratch3/yan204/yxp/Senorita/obj_addition_temp_frames"
+# Add paths for saving preprocessed data
+PREPROCESSED_DATA_PATH = "/scratch3/yan204/yxp/Senorita/preprocessed_obj_addition_data.json"
 
 # Create temporary directory for frames
 os.makedirs(FRAMES_DIR, exist_ok=True)
@@ -178,6 +187,36 @@ with open(INPUT_PATH, "r", encoding="utf-8") as f:
     data = json.load(f)
 
 print(f"Loaded {len(data)} samples")
+
+# Check if preprocessed data already exists
+def check_preprocessed_data():
+    """Check if preprocessed valid_samples and messages exist"""
+    return os.path.exists(PREPROCESSED_DATA_PATH)
+
+def load_preprocessed_data():
+    """Load preprocessed valid_samples and messages"""
+    try:
+        with open(PREPROCESSED_DATA_PATH, "r", encoding="utf-8") as f:
+            preprocessed = json.load(f)
+        return preprocessed.get("valid_samples", []), preprocessed.get("messages", [])
+    except Exception as e:
+        print(f"Error loading preprocessed data: {e}")
+        return [], []
+
+def save_preprocessed_data(valid_samples, messages):
+    """Save preprocessed valid_samples and messages"""
+    try:
+        preprocessed_data = {
+            "valid_samples": valid_samples,
+            "messages": messages,
+            "timestamp": str(datetime.datetime.now()),
+            "total_samples": len(valid_samples)
+        }
+        with open(PREPROCESSED_DATA_PATH, "w", encoding="utf-8") as f:
+            json.dump(preprocessed_data, f, indent=2, ensure_ascii=False)
+        print(f"Saved preprocessed data with {len(valid_samples)} samples to {PREPROCESSED_DATA_PATH}")
+    except Exception as e:
+        print(f"Error saving preprocessed data: {e}")
 
 # Check if frames already exist
 def check_existing_frames(frames_dir, num_samples):
@@ -201,101 +240,118 @@ def check_existing_frames(frames_dir, num_samples):
 valid_samples = []
 messages = []
 
-skip_preprocessing = check_existing_frames(FRAMES_DIR, len(data))
+# Check if preprocessed data exists
+if check_preprocessed_data():
+    print("Found existing preprocessed data, loading...")
+    valid_samples, messages = load_preprocessed_data()
+    if len(valid_samples) > 0 and len(messages) > 0:
+        print(f"Loaded {len(valid_samples)} preprocessed samples and {len(messages)} messages")
+    else:
+        print("Preprocessed data is empty or corrupted, will reprocess...")
+        valid_samples, messages = [], []
 
-if skip_preprocessing:
-    print("Frames already exist, skipping preprocessing...")
-    print("Preparing prompts from existing frames...")
+# If no valid preprocessed data, process from scratch
+if len(valid_samples) == 0 or len(messages) == 0:
+    print("Processing data from scratch...")
     
-    # Create prompts using existing frames
-    for idx, sample in enumerate(tqdm(data, desc="Creating prompts from existing frames")):
-        # Extract ID information from video path for naming (same logic as before)
-        target_parts = sample["target_video_path"].split("/")
-        if len(target_parts) >= 3:
-            filename = os.path.splitext(target_parts[-1])[0]
-            if filename.endswith("_org"):
-                filename = filename[:-4]
-            file_id = filename
-        else:
-            file_id = str(idx)
+    skip_preprocessing = check_existing_frames(FRAMES_DIR, len(data))
+
+    if skip_preprocessing:
+        print("Frames already exist, skipping preprocessing...")
+        print("Preparing prompts from existing frames...")
         
-        # Check if frames exist for this sample
-        source_frame_path = os.path.join(FRAMES_DIR, f"source_{file_id}.jpg")
-        target_frame_path = os.path.join(FRAMES_DIR, f"target_{file_id}.jpg")
-        
-        if os.path.exists(source_frame_path) and os.path.exists(target_frame_path):
-            # Create prompt message (same logic as before)
-            enhanced_instruction = sample["enhanced_instruction"]
-            
-            instruction_text = enhanced_instruction
-            if instruction_text.lower().startswith("add a "):
-                object_name = instruction_text[6:]
-            elif instruction_text.lower().startswith("add an "):
-                object_name = instruction_text[7:]
-            elif instruction_text.lower().startswith("add the "):
-                object_name = instruction_text[8:]
-            elif instruction_text.lower().startswith("add "):
-                object_name = instruction_text[4:]
+        # Create prompts using existing frames
+        for idx, sample in enumerate(tqdm(data, desc="Creating prompts from existing frames")):
+            # Extract ID information from video path for naming (same logic as before)
+            target_parts = sample["target_video_path"].split("/")
+            if len(target_parts) >= 3:
+                filename = os.path.splitext(target_parts[-1])[0]
+                if filename.endswith("_org"):
+                    filename = filename[:-4]
+                file_id = filename
             else:
-                object_name = instruction_text
+                file_id = str(idx)
             
-            question = f"Looking at these two images, the instruction was '{enhanced_instruction}'. Did the second image successfully add {object_name} to the first image? Please answer with a simple 'yes' or 'no' and provide a brief explanation."
+            # Check if frames exist for this sample
+            source_frame_path = os.path.join(FRAMES_DIR, f"source_{file_id}.jpg")
+            target_frame_path = os.path.join(FRAMES_DIR, f"target_{file_id}.jpg")
             
-            msg = [{
-                "role": "user",
-                "content": [
-                    {
-                        "type": "image",
-                        "image": source_frame_path,
-                        "min_pixels": 224 * 224,
-                        "max_pixels": 1280 * 28 * 28,
-                    },
-                    {
-                        "type": "image", 
-                        "image": target_frame_path,
-                        "min_pixels": 224 * 224,
-                        "max_pixels": 1280 * 28 * 28,
-                    },
-                    {
-                        "type": "text",
-                        "text": question
-                    }
-                ]
-            }]
-            
-            messages.append(msg)
-            valid_samples.append(sample)
-    
-    print(f"Prepared {len(messages)} samples from existing frames")
-    
-else:
-    print("Extracting frames and preparing prompts...")
-    # Use multiprocessing for frame extraction
-    max_workers = min(40, mp.cpu_count())  # Use up to 40 workers or CPU count
-    valid_results = []
-
-    with ProcessPoolExecutor(max_workers=max_workers) as executor:
-        # Prepare arguments for multiprocessing
-        args_list = [(idx, sample, FRAMES_DIR) for idx, sample in enumerate(data)]
+            if os.path.exists(source_frame_path) and os.path.exists(target_frame_path):
+                # Create prompt message (same logic as before)
+                enhanced_instruction = sample["enhanced_instruction"]
+                
+                instruction_text = enhanced_instruction
+                if instruction_text.lower().startswith("add a "):
+                    object_name = instruction_text[6:]
+                elif instruction_text.lower().startswith("add an "):
+                    object_name = instruction_text[7:]
+                elif instruction_text.lower().startswith("add the "):
+                    object_name = instruction_text[8:]
+                elif instruction_text.lower().startswith("add "):
+                    object_name = instruction_text[4:]
+                else:
+                    object_name = instruction_text
+                
+                question = f"Looking at these two images, the instruction was '{enhanced_instruction}'. Did the second image successfully add {object_name} to the first image? Please answer with a simple 'yes' or 'no' and provide a brief explanation."
+                
+                msg = [{
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image",
+                            "image": source_frame_path,
+                            "min_pixels": 224 * 224,
+                            "max_pixels": 1280 * 28 * 28,
+                        },
+                        {
+                            "type": "image", 
+                            "image": target_frame_path,
+                            "min_pixels": 224 * 224,
+                            "max_pixels": 1280 * 28 * 28,
+                        },
+                        {
+                            "type": "text",
+                            "text": question
+                        }
+                    ]
+                }]
+                
+                messages.append(msg)
+                valid_samples.append(sample)
         
-        # Submit all tasks
-        futures = [executor.submit(process_single_sample_for_frames, args) for args in args_list]
+        print(f"Prepared {len(messages)} samples from existing frames")
         
-        # Collect results with progress bar
-        for future in tqdm(as_completed(futures), total=len(futures), desc="Processing samples"):
-            result = future.result()
-            if result is not None:
-                valid_results.append(result)
+    else:
+        print("Extracting frames and preparing prompts...")
+        # Use multiprocessing for frame extraction
+        max_workers = min(40, mp.cpu_count())  # Use up to 40 workers or CPU count
+        valid_results = []
 
-    # Sort results by original index to maintain order
-    valid_results.sort(key=lambda x: x['idx'])
+        with ProcessPoolExecutor(max_workers=max_workers) as executor:
+            # Prepare arguments for multiprocessing
+            args_list = [(idx, sample, FRAMES_DIR) for idx, sample in enumerate(data)]
+            
+            # Submit all tasks
+            futures = [executor.submit(process_single_sample_for_frames, args) for args in args_list]
+            
+            # Collect results with progress bar
+            for future in tqdm(as_completed(futures), total=len(futures), desc="Processing samples"):
+                result = future.result()
+                if result is not None:
+                    valid_results.append(result)
 
-    # Extract messages and samples in original order
-    for result in valid_results:
-        messages.append(result['message'])
-        valid_samples.append(result['sample'])
+        # Sort results by original index to maintain order
+        valid_results.sort(key=lambda x: x['idx'])
 
-    print(f"Prepared {len(messages)} valid samples for processing")
+        # Extract messages and samples in original order
+        for result in valid_results:
+            messages.append(result['message'])
+            valid_samples.append(result['sample'])
+
+        print(f"Prepared {len(messages)} valid samples for processing")
+    
+    # Save preprocessed data for future use
+    save_preprocessed_data(valid_samples, messages)
 
 # Continue with the rest of the processing
 print(f"Ready to process {len(messages)} samples with vision model...")
@@ -316,7 +372,7 @@ if os.path.exists(OUTPUT_PATH):
         print(f"Error reading existing output file: {e}")
 
 print("Processing samples with vision model...")
-for i in tqdm(range(start_idx, len(messages), BSZ), desc="Processing batches"):
+for i in tqdm(range(start_idx, len(messages), BSZ), desc="Processing qwen filter data"):
     batch_messages = messages[i:i + BSZ]
     batch_samples = valid_samples[i:i + BSZ]
 
@@ -335,8 +391,15 @@ for i in tqdm(range(start_idx, len(messages), BSZ), desc="Processing batches"):
                 "mm_processor_kwargs": {},
             })
 
+        # Temporarily disable tqdm to prevent vLLM progress bars
+        import tqdm as original_tqdm
+        original_tqdm.tqdm.disable = True
+        
         outputs = llm.generate(llm_inputs, sampling_params=sampling_params)
         batch_output_text = [out.outputs[0].text for out in outputs]
+        
+        # Re-enable tqdm
+        original_tqdm.tqdm.disable = False
         
     except Exception as e:
         print(f'Error processing batch starting at {i}: {e}')
