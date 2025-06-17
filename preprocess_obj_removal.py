@@ -7,18 +7,21 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 import multiprocessing as mp
 import datetime
 import os
+from moviepy.editor import VideoFileClip
 
 def extract_first_frame(video_path, output_path):
-    """Extract the first frame from a video and save as image"""
+    """Extract the first frame from a video and save as image using moviepy"""
     try:
-        cap = cv2.VideoCapture(video_path)
-        ret, frame = cap.read()
-        if ret:
-            cv2.imwrite(output_path, frame)
-            cap.release()
-            return True
-        cap.release()
-        return False
+        clip = VideoFileClip(video_path)
+        # Get the first frame
+        first_frame = clip.get_frame(0)
+        # Convert to PIL Image and save
+        from PIL import Image
+        import numpy as np
+        frame_pil = Image.fromarray(np.uint8(first_frame))
+        frame_pil.save(output_path, "JPEG", quality=95)
+        clip.close()
+        return True
     except Exception as e:
         print(f"Error extracting frame from {video_path}: {e}")
         return False
