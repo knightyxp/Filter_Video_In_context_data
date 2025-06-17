@@ -7,6 +7,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 import multiprocessing as mp
 import glob
 import datetime
+import os
 
 from transformers import AutoProcessor, AutoTokenizer
 from vllm import LLM, SamplingParams
@@ -70,8 +71,8 @@ def extract_answer(text):
         return 'no'
     
     # Look for positive indicators
-    positive_indicators = ['successfully', 'added', 'present', 'visible', 'appears', 'indeed', 'correct']
-    negative_indicators = ['not', 'no', 'absent', 'missing', 'failed', 'unable', 'cannot']
+    positive_indicators = ['successfully', 'removed', 'absent', 'missing', 'gone', 'deleted', 'indeed', 'correct']
+    negative_indicators = ['not', 'no', 'present', 'visible', 'failed', 'unable', 'cannot', 'still there']
     
     pos_count = sum(1 for indicator in positive_indicators if indicator in text_lower)
     neg_count = sum(1 for indicator in negative_indicators if indicator in text_lower)
@@ -118,23 +119,23 @@ def process_single_sample_for_frames(args):
     if not extract_first_frame(target_video, target_frame_path):
         return None
     
-    # Create prompt message
+    # Create prompt message for object removal
     enhanced_instruction = sample["enhanced_instruction"]
     
-    # Extract the main instruction (remove "Add a/an/the" prefix if present)
+    # Extract the main instruction (remove "Remove a/an/the" prefix if present)
     instruction_text = enhanced_instruction
-    if instruction_text.lower().startswith("add a "):
-        object_name = instruction_text[6:]
-    elif instruction_text.lower().startswith("add an "):
+    if instruction_text.lower().startswith("remove a "):
+        object_name = instruction_text[9:]
+    elif instruction_text.lower().startswith("remove an "):
+        object_name = instruction_text[10:]
+    elif instruction_text.lower().startswith("remove the "):
+        object_name = instruction_text[11:]
+    elif instruction_text.lower().startswith("remove "):
         object_name = instruction_text[7:]
-    elif instruction_text.lower().startswith("add the "):
-        object_name = instruction_text[8:]
-    elif instruction_text.lower().startswith("add "):
-        object_name = instruction_text[4:]
     else:
         object_name = instruction_text
     
-    question = f"Looking at these two images, the instruction was '{enhanced_instruction}'. Did the second image successfully add {object_name} to the first image? Please answer with a simple 'yes' or 'no' and provide a brief explanation."
+    question = f"Looking at these two images, the instruction was '{enhanced_instruction}'. Did the second image successfully remove {object_name} from the first image? Please answer with a simple 'yes' or 'no' and provide a brief explanation."
     
     msg = [{
         "role": "user",
@@ -165,11 +166,11 @@ def process_single_sample_for_frames(args):
     } 
 
 # Load the filtered data
-INPUT_PATH = "/scratch3/yan204/yxp/Filter_Video_In_context_data/filter_resolution_json/filtered_obj_addition_592x336.json"
-OUTPUT_PATH = "/scratch3/yan204/yxp/Senorita/hq_obj_addition.json"
-FRAMES_DIR = "/scratch3/yan204/yxp/Senorita/obj_addition_temp_frames"
+INPUT_PATH = "/scratch3/yan204/yxp/Filter_Video_In_context_data/filter_resolution_json/filtered_obj_removal_592x336.json"
+OUTPUT_PATH = "/scratch3/yan204/yxp/Senorita/hq_obj_removal.json"
+FRAMES_DIR = "/scratch3/yan204/yxp/Senorita/obj_removal_temp_frames"
 # Add paths for saving preprocessed data
-PREPROCESSED_DATA_PATH = "/scratch3/yan204/yxp/Senorita/preprocessed_obj_addition_data.json"
+PREPROCESSED_DATA_PATH = "/scratch3/yan204/yxp/Senorita/preprocessed_obj_removal_data.json"
 
 # Create temporary directory for frames
 os.makedirs(FRAMES_DIR, exist_ok=True)
@@ -269,22 +270,22 @@ if len(valid_samples) == 0 or len(messages) == 0:
             target_frame_path = os.path.join(FRAMES_DIR, f"target_{file_id}.jpg")
             
             if os.path.exists(source_frame_path) and os.path.exists(target_frame_path):
-                # Create prompt message (same logic as before)
+                # Create prompt message for object removal (same logic as before)
                 enhanced_instruction = sample["enhanced_instruction"]
                 
                 instruction_text = enhanced_instruction
-                if instruction_text.lower().startswith("add a "):
-                    object_name = instruction_text[6:]
-                elif instruction_text.lower().startswith("add an "):
+                if instruction_text.lower().startswith("remove a "):
+                    object_name = instruction_text[9:]
+                elif instruction_text.lower().startswith("remove an "):
+                    object_name = instruction_text[10:]
+                elif instruction_text.lower().startswith("remove the "):
+                    object_name = instruction_text[11:]
+                elif instruction_text.lower().startswith("remove "):
                     object_name = instruction_text[7:]
-                elif instruction_text.lower().startswith("add the "):
-                    object_name = instruction_text[8:]
-                elif instruction_text.lower().startswith("add "):
-                    object_name = instruction_text[4:]
                 else:
                     object_name = instruction_text
                 
-                question = f"Looking at these two images, the instruction was '{enhanced_instruction}'. Did the second image successfully add {object_name} to the first image? Please answer with a simple 'yes' or 'no' and provide a brief explanation."
+                question = f"Looking at these two images, the instruction was '{enhanced_instruction}'. Did the second image successfully remove {object_name} from the first image? Please answer with a simple 'yes' or 'no' and provide a brief explanation."
                 
                 msg = [{
                     "role": "user",
@@ -420,7 +421,7 @@ if len(final_output) > 0:
     print(f"Quality rate: {len(hq_samples)/len(final_output)*100:.2f}%")
 
 # Save high-quality results
-hq_output_path = "/projects/D2DCRC/xiangpeng/Senorita/hq_obj_addition_filtered.json"
+hq_output_path = "/projects/D2DCRC/xiangpeng/Senorita/hq_obj_removal_filtered.json"
 with open(hq_output_path, "w", encoding="utf-8") as f:
     json.dump({"results": hq_samples}, f, indent=2, ensure_ascii=False)
 
@@ -435,5 +436,4 @@ try:
 except Exception as e:
     print(f"Error cleaning up temporary frames: {e}")
 
-print("Script completed!")
-
+print("Script completed!") 
