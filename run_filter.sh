@@ -1,0 +1,1 @@
+CUDA_VISIBLE_DEVICES=0 python qwen_filter_edit_obj_addition.py
