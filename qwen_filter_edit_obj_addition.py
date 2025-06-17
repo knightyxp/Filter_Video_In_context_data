@@ -84,8 +84,8 @@ def process_single_sample_for_frames(args):
     idx, sample, frames_dir = args
     
     # Get absolute paths
-    target_video = os.path.join("/projects/D2DCRC/xiangpeng/Senorita", sample["target_video_path"].lstrip("./"))
-    source_video = os.path.join("/projects/D2DCRC/xiangpeng/Senorita", sample["source_video_path"].lstrip("./"))
+    target_video = os.path.join("/scratch3/yan204/yxp/Senorita", sample["target_video_path"].lstrip("./"))
+    source_video = os.path.join("/scratch3/yan204/yxp/Senorita", sample["source_video_path"].lstrip("./"))
     
     # Check if videos exist
     if not os.path.exists(target_video) or not os.path.exists(source_video):
@@ -161,9 +161,9 @@ def process_single_sample_for_frames(args):
     } 
 
 # Load the filtered data
-INPUT_PATH = "/projects/D2DCRC/xiangpeng/Senorita/filtered_obj_addition_592x336.json"
-OUTPUT_PATH = "/projects/D2DCRC/xiangpeng/Senorita/hq_obj_addition.json"
-FRAMES_DIR = "/projects/D2DCRC/xiangpeng/Senorita/obj_addition_temp_frames"
+INPUT_PATH = "/scratch3/yan204/yxp/Filter_Video_In_context_data/filter_resolution_json/filtered_obj_addition_592x336.json"
+OUTPUT_PATH = "/scratch3/yan204/yxp/Senorita/hq_obj_addition.json"
+FRAMES_DIR = "/scratch3/yan204/yxp/Senorita/obj_addition_temp_frames"
 
 # Create temporary directory for frames
 os.makedirs(FRAMES_DIR, exist_ok=True)
