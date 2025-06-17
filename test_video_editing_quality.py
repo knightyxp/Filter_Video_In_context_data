@@ -7,6 +7,10 @@ import torch
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import multiprocessing as mp
 
+# Set environment variables for better GPU memory management
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"  # Use only 2 GPUs
+
 from transformers import AutoProcessor, AutoTokenizer
 from vllm import LLM, SamplingParams
 from qwen_vl_utils import process_vision_info
@@ -17,12 +21,12 @@ BSZ = 1  # Process one video pair at a time
 # Optimize vLLM configuration for better memory usage
 llm = LLM(
     model=MODEL_PATH,
-    tensor_parallel_size=torch.cuda.device_count(),  # Use all available GPUs
+    tensor_parallel_size=2,  # Reduce GPU count to save memory
     dtype="bfloat16",  # Use bfloat16 to save memory like transformers version
-    limit_mm_per_prompt={"image": 10, "video": 10},
-    max_model_len=8192,
-    gpu_memory_utilization=0.85,  # Slightly higher utilization
-    swap_space=2,  # Add swap space for memory overflow
+    limit_mm_per_prompt={"image": 8, "video": 0},  # Limit to 8 images, no video
+    max_model_len=32768,  # Increase context length for multi-modal inputs
+    gpu_memory_utilization=0.75,  # Reduce memory utilization
+    swap_space=4,  # Increase swap space for memory overflow
     enforce_eager=True,  # Use eager execution for better memory management
 )
 
@@ -131,7 +135,7 @@ def process_video_pair(org_video_path, edited_video_path, frames_dir):
             "type": "image",
             "image": frame_path,
             "min_pixels": 224 * 224,
-            "max_pixels": 1280 * 28 * 28,
+            "max_pixels": 512 * 512,  # Reduce max resolution to save memory
         })
     
     # Add edited video frames
@@ -140,7 +144,7 @@ def process_video_pair(org_video_path, edited_video_path, frames_dir):
             "type": "image",
             "image": frame_path,
             "min_pixels": 224 * 224,
-            "max_pixels": 1280 * 28 * 28,
+            "max_pixels": 512 * 512,  # Reduce max resolution to save memory
         })
     
     # Add text prompt
