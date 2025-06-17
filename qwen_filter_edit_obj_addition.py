@@ -6,6 +6,10 @@ from tqdm import tqdm
 import torch
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import multiprocessing as mp
+import glob
+
+# Disable vLLM progress bars
+os.environ["VLLM_DISABLE_PROGRESS_BAR"] = "1"
 
 from transformers import AutoProcessor, AutoTokenizer
 from vllm import LLM, SamplingParams
@@ -25,6 +29,7 @@ llm = LLM(
     gpu_memory_utilization=0.85,  # Slightly higher utilization
     swap_space=2,  # Add swap space for memory overflow
     enforce_eager=True,  # Use eager execution for better memory management
+    disable_log_stats=True,  # Disable vLLM progress logs
 )
 
 sampling_params = SamplingParams(
@@ -174,37 +179,126 @@ with open(INPUT_PATH, "r", encoding="utf-8") as f:
 
 print(f"Loaded {len(data)} samples")
 
+# Check if frames already exist
+def check_existing_frames(frames_dir, num_samples):
+    """Check if frames already exist for all samples"""
+    if not os.path.exists(frames_dir):
+        return False
+    
+    # Count existing source and target frames
+    source_frames = glob.glob(os.path.join(frames_dir, "source_*.jpg"))
+    target_frames = glob.glob(os.path.join(frames_dir, "target_*.jpg"))
+    
+    expected_frames = num_samples * 2  # Each sample has source and target frame
+    actual_frames = len(source_frames) + len(target_frames)
+    
+    print(f"Found {len(source_frames)} source frames and {len(target_frames)} target frames")
+    print(f"Expected {expected_frames} frames total, found {actual_frames}")
+    
+    return actual_frames >= expected_frames
+
 # Process data to extract frames and create prompts
 valid_samples = []
 messages = []
 
-print("Extracting frames and preparing prompts...")
-# Use multiprocessing for frame extraction
-max_workers = min(40, mp.cpu_count())  # Use up to 40 workers or CPU count
-valid_results = []
+skip_preprocessing = check_existing_frames(FRAMES_DIR, len(data))
 
-with ProcessPoolExecutor(max_workers=max_workers) as executor:
-    # Prepare arguments for multiprocessing
-    args_list = [(idx, sample, FRAMES_DIR) for idx, sample in enumerate(data)]
+if skip_preprocessing:
+    print("Frames already exist, skipping preprocessing...")
+    print("Preparing prompts from existing frames...")
     
-    # Submit all tasks
-    futures = [executor.submit(process_single_sample_for_frames, args) for args in args_list]
+    # Create prompts using existing frames
+    for idx, sample in enumerate(tqdm(data, desc="Creating prompts from existing frames")):
+        # Extract ID information from video path for naming (same logic as before)
+        target_parts = sample["target_video_path"].split("/")
+        if len(target_parts) >= 3:
+            filename = os.path.splitext(target_parts[-1])[0]
+            if filename.endswith("_org"):
+                filename = filename[:-4]
+            file_id = filename
+        else:
+            file_id = str(idx)
+        
+        # Check if frames exist for this sample
+        source_frame_path = os.path.join(FRAMES_DIR, f"source_{file_id}.jpg")
+        target_frame_path = os.path.join(FRAMES_DIR, f"target_{file_id}.jpg")
+        
+        if os.path.exists(source_frame_path) and os.path.exists(target_frame_path):
+            # Create prompt message (same logic as before)
+            enhanced_instruction = sample["enhanced_instruction"]
+            
+            instruction_text = enhanced_instruction
+            if instruction_text.lower().startswith("add a "):
+                object_name = instruction_text[6:]
+            elif instruction_text.lower().startswith("add an "):
+                object_name = instruction_text[7:]
+            elif instruction_text.lower().startswith("add the "):
+                object_name = instruction_text[8:]
+            elif instruction_text.lower().startswith("add "):
+                object_name = instruction_text[4:]
+            else:
+                object_name = instruction_text
+            
+            question = f"Looking at these two images, the instruction was '{enhanced_instruction}'. Did the second image successfully add {object_name} to the first image? Please answer with a simple 'yes' or 'no' and provide a brief explanation."
+            
+            msg = [{
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "image": source_frame_path,
+                        "min_pixels": 224 * 224,
+                        "max_pixels": 1280 * 28 * 28,
+                    },
+                    {
+                        "type": "image", 
+                        "image": target_frame_path,
+                        "min_pixels": 224 * 224,
+                        "max_pixels": 1280 * 28 * 28,
+                    },
+                    {
+                        "type": "text",
+                        "text": question
+                    }
+                ]
+            }]
+            
+            messages.append(msg)
+            valid_samples.append(sample)
     
-    # Collect results with progress bar
-    for future in tqdm(as_completed(futures), total=len(futures), desc="Processing samples"):
-        result = future.result()
-        if result is not None:
-            valid_results.append(result)
+    print(f"Prepared {len(messages)} samples from existing frames")
+    
+else:
+    print("Extracting frames and preparing prompts...")
+    # Use multiprocessing for frame extraction
+    max_workers = min(40, mp.cpu_count())  # Use up to 40 workers or CPU count
+    valid_results = []
 
-# Sort results by original index to maintain order
-valid_results.sort(key=lambda x: x['idx'])
+    with ProcessPoolExecutor(max_workers=max_workers) as executor:
+        # Prepare arguments for multiprocessing
+        args_list = [(idx, sample, FRAMES_DIR) for idx, sample in enumerate(data)]
+        
+        # Submit all tasks
+        futures = [executor.submit(process_single_sample_for_frames, args) for args in args_list]
+        
+        # Collect results with progress bar
+        for future in tqdm(as_completed(futures), total=len(futures), desc="Processing samples"):
+            result = future.result()
+            if result is not None:
+                valid_results.append(result)
 
-# Extract messages and samples in original order
-for result in valid_results:
-    messages.append(result['message'])
-    valid_samples.append(result['sample'])
+    # Sort results by original index to maintain order
+    valid_results.sort(key=lambda x: x['idx'])
 
-print(f"Prepared {len(messages)} valid samples for processing")
+    # Extract messages and samples in original order
+    for result in valid_results:
+        messages.append(result['message'])
+        valid_samples.append(result['sample'])
+
+    print(f"Prepared {len(messages)} valid samples for processing")
+
+# Continue with the rest of the processing
+print(f"Ready to process {len(messages)} samples with vision model...")
 
 # Process in batches
 final_output = []
