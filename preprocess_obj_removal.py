@@ -7,7 +7,6 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 import multiprocessing as mp
 import datetime
 import os
-from moviepy.editor import VideoFileClip
 
 def extract_first_frame(video_path, output_path):
     """Extract the first frame from a video and save as image"""
