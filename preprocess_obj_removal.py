@@ -106,7 +106,7 @@ def process_single_sample_for_frames(args):
         'sample': sample,
         'idx': idx
     } 
-aa
+
 # Load the filtered data
 INPUT_PATH = "/scratch3/yan204/yxp/Filter_Video_In_context_data/filter_resolution_json/filtered_obj_removal_592x336.json"
 FRAMES_DIR = "/scratch3/yan204/yxp/Senorita/obj_removal_temp_frames_new"
