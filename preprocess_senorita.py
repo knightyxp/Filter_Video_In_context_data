@@ -15,7 +15,7 @@ TASK_NAME = "obj_swap"
 
 # Base directories - adjust if your project structure changes
 BASE_SCRATCH = "/scratch3/yan204/yxp/Senorita"
-FILTER_DIR = os.path.join(BASE_SCRATCH, "Filter_Video_In_context_data", "filter_resolution_json")
+FILTER_DIR = os.path.join(BASE_SCRATCH, "Filter_Video_In_context_data")
 PREPROCESS_DIR = BASE_SCRATCH  # where preprocessed data and frame folders live
 
 # Automatically derive paths from TASK_NAME
