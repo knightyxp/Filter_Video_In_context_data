@@ -84,6 +84,8 @@ def load_preprocessed_data():
 
 def process_batch_with_transformers(messages, max_new_tokens=256):
     """Process a batch of messages using transformers"""
+    if not messages:
+        return []
     try:
         # Prepare texts
         texts = []
@@ -165,7 +167,12 @@ if os.path.exists(OUTPUT_PATH):
         print(f"Error reading existing output file: {e}")
 
 print("Processing samples with VIE scoring using transformers...")
-for i in tqdm(range(start_idx, len(valid_samples), BSZ), desc="Processing batches"):
+
+print(len(valid_samples), len(sc_messages), len(pq_messages))
+
+min_len = min(len(valid_samples), len(sc_messages), len(pq_messages))
+print(f"Will actually iterate up to index {min_len}")
+for i in tqdm(range(start_idx, min_len, BSZ), desc="Processing batches"):
     batch_sc_messages = sc_messages[i:i + BSZ]
     batch_pq_messages = pq_messages[i:i + BSZ]
     batch_samples = valid_samples[i:i + BSZ]
