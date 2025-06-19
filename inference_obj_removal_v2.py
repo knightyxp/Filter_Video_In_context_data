@@ -10,7 +10,7 @@ import math
 from transformers import Qwen2_5_VLForConditionalGeneration, AutoProcessor
 from qwen_vl_utils import process_vision_info
 
-MODEL_PATH = "/projects/D2DCRC/xiangpeng/Qwen2.5-VL-32B-Instruct"
+MODEL_PATH = "/scratch3/yan204/yxp/Qwen2.5-VL-32B-Instruct"
 BSZ = 2  # Reduce batch size for transformers version
 
 # Load model with flash attention for better performance
