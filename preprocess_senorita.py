@@ -8,6 +8,25 @@ import multiprocessing as mp
 import datetime
 import os
 
+# === User-configurable task name ===
+# Just set TASK_NAME to switch between different preprocessing tasks.
+# For example: "obj_swap", "obj_removal", "object_swap", etc.
+TASK_NAME = "obj_swap"
+
+# Base directories - adjust if your project structure changes
+BASE_SCRATCH = "/scratch3/yan204/yxp/Senorita"
+FILTER_DIR = os.path.join(BASE_SCRATCH, "Filter_Video_In_context_data", "filter_resolution_json")
+PREPROCESS_DIR = BASE_SCRATCH  # where preprocessed data and frame folders live
+
+# Automatically derive paths from TASK_NAME
+INPUT_PATH = os.path.join(FILTER_DIR, f"filtered_{TASK_NAME}.json")
+FRAMES_DIR = os.path.join(PREPROCESS_DIR, f"{TASK_NAME}_temp_frames")
+PREPROCESSED_DATA_PATH = os.path.join(PREPROCESS_DIR, f"preprocessed_{TASK_NAME}_data.json")
+
+# Ensure frames directory exists
+os.makedirs(FRAMES_DIR, exist_ok=True)
+
+
 def extract_first_frame(video_path, output_path):
     """Extract the first frame from a video and save as image"""
     try:
@@ -125,11 +144,6 @@ def process_single_sample_for_frames(args):
         'sample': sample,
         'idx': idx
     } 
-
-# Load the filtered data
-INPUT_PATH = "/scratch3/yan204/yxp/Filter_Video_In_context_data/filter_resolution_json/filtered_obj_removal_592x336.json"
-FRAMES_DIR = "/scratch3/yan204/yxp/Senorita/obj_removal_temp_frames"
-PREPROCESSED_DATA_PATH = "/scratch3/yan204/yxp/Senorita/preprocessed_obj_removal_data.json"
 
 # Create temporary directory for frames
 os.makedirs(FRAMES_DIR, exist_ok=True)

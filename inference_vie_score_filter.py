@@ -14,6 +14,15 @@ from qwen_vl_utils import process_vision_info
 MODEL_PATH = "/scratch3/yan204/yxp/Qwen2.5-VL-32B-Instruct"
 BSZ = 4  # Reduce batch size to save memory
 
+TASK_NAME = "obj_swap"
+# Base directory for data and outputs
+BASE_DIR = "/scratch3/yan204/yxp/Senorita"
+
+PREPROCESSED_DATA_PATH = os.path.join(BASE_DIR, f"preprocessed_{TASK_NAME}_data.json")
+OUTPUT_PATH = os.path.join(BASE_DIR, f"vie_score_{TASK_NAME}.json")
+hq_output_path = os.path.join(BASE_DIR, f"hq_{TASK_NAME}_filtered.json")
+
+
 # Optimize vLLM configuration for better memory usage
 llm = LLM(
     model=MODEL_PATH,
@@ -79,9 +88,6 @@ def extract_scores_from_response(text):
         print(f"Error extracting scores: {e}")
         return None, None, text
 
-# Load preprocessed data
-PREPROCESSED_DATA_PATH = "/scratch3/yan204/yxp/Senorita/preprocessed_obj_removal_data.json"
-OUTPUT_PATH = "/scratch3/yan204/yxp/Senorita/vie_score_obj_removal.json"
 
 def load_preprocessed_data():
     """Load preprocessed valid_samples, sc_messages and pq_messages"""
@@ -250,8 +256,7 @@ if final_output:
         percentage = count / len(overall_scores) * 100 if overall_scores else 0
         print(f"{low:.2f}-{high:.2f}: {count} 样本 ({percentage:.1f}%)")
 
-# Save high-quality results
-hq_output_path = "/scratch3/yan204/yxp/Senorita/hq_obj_removal_filtered.json"
+
 if final_output:
     hq_samples = [sample for sample in final_output if sample.get("overall_score", 0) > 0.9]
     with open(hq_output_path, "w", encoding="utf-8") as f:
