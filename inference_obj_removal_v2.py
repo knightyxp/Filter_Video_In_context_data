@@ -87,34 +87,23 @@ def process_batch_with_transformers(messages, max_new_tokens=256):
     if not messages:
         return []
     try:
-        # Prepare texts
+        # Prepare texts - one for each message
         texts = []
-        all_image_inputs = []
-        all_video_inputs = []
-        
         for msg in messages:
-            text = processor.apply_chat_template(msg, tokenize=False, add_generation_prompt=True)
+            text = processor.apply_chat_template([msg], tokenize=False, add_generation_prompt=True)
             texts.append(text)
-            
-            # 先拿到结果
-            result = process_vision_info([msg])
-            # 如果返回 None 就手动置成空 tuple
-            if result is None:
-                image_inputs, video_inputs = [], []
-            else:
-                image_inputs, video_inputs = result
-                # 保护一下，防止单边为 None
-                image_inputs = image_inputs or []
-                video_inputs = video_inputs or []
-            
-            all_image_inputs.extend(image_inputs)
-            all_video_inputs.extend(video_inputs)
+        
+        # Get vision info for all messages at once
+        image_inputs, video_inputs = process_vision_info(messages)
+        # Handle None returns
+        image_inputs = image_inputs or []
+        video_inputs = video_inputs or []
         
         # Process inputs
         inputs = processor(
             text=texts,
-            images=all_image_inputs,
-            videos=all_video_inputs,
+            images=image_inputs,
+            videos=video_inputs,
             padding=True,
             return_tensors="pt",
         ).to("cuda")
