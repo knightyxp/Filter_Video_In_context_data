@@ -11,7 +11,7 @@ from transformers import Qwen2_5_VLForConditionalGeneration, AutoProcessor
 from qwen_vl_utils import process_vision_info
 
 MODEL_PATH = "/scratch3/yan204/yxp/Qwen2.5-VL-32B-Instruct"
-BSZ = 2  # Reduce batch size for transformers version
+BSZ = 4 # Reduce batch size for transformers version
 
 # Load model with flash attention for better performance
 model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
@@ -94,7 +94,17 @@ def process_batch_with_transformers(messages, max_new_tokens=256):
             text = processor.apply_chat_template(msg, tokenize=False, add_generation_prompt=True)
             texts.append(text)
             
-            image_inputs, video_inputs = process_vision_info([msg])
+            # 先拿到结果
+            result = process_vision_info([msg])
+            # 如果返回 None 就手动置成空 tuple
+            if result is None:
+                image_inputs, video_inputs = [], []
+            else:
+                image_inputs, video_inputs = result
+                # 保护一下，防止单边为 None
+                image_inputs = image_inputs or []
+                video_inputs = video_inputs or []
+            
             all_image_inputs.extend(image_inputs)
             all_video_inputs.extend(video_inputs)
         
@@ -105,8 +115,7 @@ def process_batch_with_transformers(messages, max_new_tokens=256):
             videos=all_video_inputs,
             padding=True,
             return_tensors="pt",
-        )
-        inputs = inputs.to("cuda")
+        ).to("cuda")
         
         # Generate
         with torch.no_grad():
