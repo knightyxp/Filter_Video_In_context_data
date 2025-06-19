@@ -384,12 +384,14 @@ if final_output:
         print(f"最大值: {max(overall_scores):.3f}")
     
     # 分数分布统计
-    score_ranges = [(0.0, 0.1), (0.1, 0.3), (0.3, 0.5), (0.5, 0.7), (0.7, 0.9), (0.9, 1.0)]
+    score_ranges = [(0.0, 0.1), (0.1, 0.3), (0.3, 0.5), (0.5, 0.7), 
+                    (0.7, 0.75), (0.75, 0.8), (0.8, 0.85), (0.85, 0.9), 
+                    (0.9, 0.95), (0.95, 1.0)]
     print(f"\n=== Overall分数分布 ===")
     for low, high in score_ranges:
         count = len([s for s in overall_scores if low <= s < high])
         percentage = count / len(overall_scores) * 100 if overall_scores else 0
-        print(f"{low:.1f}-{high:.1f}: {count} 样本 ({percentage:.1f}%)")
+        print(f"{low:.2f}-{high:.2f}: {count} 样本 ({percentage:.1f}%)")
 
 # Save high-quality results
 hq_output_path = "/scratch3/yan204/yxp/Senorita/vie_score_details_obj_removal.json"
