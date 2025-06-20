@@ -7,11 +7,19 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 import multiprocessing as mp
 import datetime
 import os
-
+import argparse
 # === User-configurable task name ===
 # Just set TASK_NAME to switch between different preprocessing tasks.
 # For example: "obj_swap", "obj_removal", "object_swap", etc.
-TASK_NAME = "obj_swap"
+parser = argparse.ArgumentParser(description="预处理脚本：按 TASK_NAME 提取帧并生成 VIE 提示")
+parser.add_argument(
+    "--task_name", "-t",
+    type=str,
+    default="obj_swap",
+    help="任务名称，对应 filtered_<task_name>_592x336.json"
+)
+args = parser.parse_args()
+TASK_NAME = args.task_name
 
 # Base directories - adjust if your project structure changes
 BASE_SCRATCH = "/scratch3/yan204/yxp/Senorita"
@@ -19,7 +27,7 @@ FILTER_DIR = os.path.join(BASE_SCRATCH, "filter_resolution_json")
 PREPROCESS_DIR = BASE_SCRATCH  # where preprocessed data and frame folders live
 
 # Automatically derive paths from TASK_NAME
-INPUT_PATH = os.path.join(FILTER_DIR, f"filtered_{TASK_NAME}_592x336.json")
+INPUT_PATH = os.path.join(FILTER_DIR, f"updates_data_{TASK_NAME}.json")
 FRAMES_DIR = os.path.join(PREPROCESS_DIR, f"{TASK_NAME}_temp_frames")
 PREPROCESSED_DATA_PATH = os.path.join(PREPROCESS_DIR, f"preprocessed_{TASK_NAME}_data.json")
 

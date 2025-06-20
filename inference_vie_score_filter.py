@@ -6,7 +6,7 @@ import torch
 import os
 import shutil
 import math
-
+import argparse
 from transformers import AutoProcessor, AutoTokenizer
 from vllm import LLM, SamplingParams
 from qwen_vl_utils import process_vision_info
@@ -14,7 +14,15 @@ from qwen_vl_utils import process_vision_info
 MODEL_PATH = "/scratch3/yan204/yxp/Qwen2.5-VL-32B-Instruct"
 BSZ = 4  # Reduce batch size to save memory
 
-TASK_NAME = "obj_swap"
+parser = argparse.ArgumentParser(description="预处理脚本：按 TASK_NAME 提取帧并生成 VIE 提示")
+parser.add_argument(
+    "--task_name", "-t",
+    type=str,
+    default="obj_swap",
+)
+args = parser.parse_args()
+TASK_NAME = args.task_name
+
 # Base directory for data and outputs
 BASE_DIR = "/scratch3/yan204/yxp/Senorita"
 
