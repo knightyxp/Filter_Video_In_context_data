@@ -23,11 +23,10 @@ TASK_NAME = args.task_name
 
 # Base directories - adjust if your project structure changes
 BASE_SCRATCH = "/scratch3/yan204/yxp/Senorita"
-FILTER_DIR = os.path.join(BASE_SCRATCH, "filter_resolution_json")
 PREPROCESS_DIR = BASE_SCRATCH  # where preprocessed data and frame folders live
 
 # Automatically derive paths from TASK_NAME
-INPUT_PATH = os.path.join(FILTER_DIR, f"updates_data_{TASK_NAME}.json")
+INPUT_PATH = os.path.join(PREPROCESS_DIR, f"updates_data_{TASK_NAME}.json")
 FRAMES_DIR = os.path.join(PREPROCESS_DIR, f"{TASK_NAME}_temp_frames")
 PREPROCESSED_DATA_PATH = os.path.join(PREPROCESS_DIR, f"preprocessed_{TASK_NAME}_data.json")
 
