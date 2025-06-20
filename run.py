@@ -20,11 +20,11 @@ def main(args):
 
     # 3. 根据输入大小参数准备随机输入张量
     if args.use_large_input == 1:
-        batch_size = 240
+        batch_size = 2400
     elif args.use_large_input == 0:
-        batch_size = 180
+        batch_size = 1800
     else:
-        batch_size = 158
+        batch_size = 1580
 
     inputs = [
         # transformers 的 ViT 要求输入形状为 (batch, 3, 224, 224)
@@ -45,7 +45,7 @@ def main(args):
         if int(time.time() - start_time) % 10 == 0:
             loss = random.random()
             now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            print(f"{now} 伪 Loss: {loss:.4f}")
+            print(f"{now} Loss: {loss:.4f}")
 
         # 如需减轻 CPU 负担，可解除下一行的注释
         # time.sleep(0.1)
