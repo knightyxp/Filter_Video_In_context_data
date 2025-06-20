@@ -12,7 +12,7 @@ from vllm import LLM, SamplingParams
 from qwen_vl_utils import process_vision_info
 
 MODEL_PATH = "/scratch3/yan204/yxp/Qwen2.5-VL-32B-Instruct"
-BSZ = 64  # Reduce batch size to save memory
+BSZ = 128  # Reduce batch size to save memory
 
 parser = argparse.ArgumentParser(description="预处理脚本：按 TASK_NAME 提取帧并生成 VIE 提示")
 parser.add_argument(
