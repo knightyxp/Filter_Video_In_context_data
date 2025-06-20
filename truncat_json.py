@@ -1,6 +1,6 @@
 import json
 
-F = "vie_score_obj_removal.json"
+F = "/scratch3/yan204/yxp/Senorita/vie_score_obj_removal.json"
 with open(F, "r", encoding="utf-8") as f:
     data = json.load(f)
 
