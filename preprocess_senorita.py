@@ -34,6 +34,18 @@ PREPROCESSED_DATA_PATH = os.path.join(PREPROCESS_DIR, f"preprocessed_{TASK_NAME}
 os.makedirs(FRAMES_DIR, exist_ok=True)
 
 
+ def flatten_list(x):
+     """
+     递归展开所有嵌套的 list，返回一个只含基础元素（这里就是 dict）的扁平列表。
+     """
+     if isinstance(x, list):
+         out = []
+         for el in x:
+             out.extend(flatten_list(el))
+         return out
+     else:
+         return [x]
+
 def extract_first_frame(video_path, output_path):
     """Extract the first frame from a video and save as image"""
     try:
@@ -158,6 +170,7 @@ os.makedirs(FRAMES_DIR, exist_ok=True)
 print("Loading filtered data...")
 with open(INPUT_PATH, "r", encoding="utf-8") as f:
     data = json.load(f)
+    data = flatten_list(data)
 
 print(f"Loaded {len(data)} samples")
 

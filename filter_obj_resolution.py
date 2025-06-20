@@ -18,23 +18,14 @@ def is_592x336(video_path):
     cap.release()
     return width == 592 and height == 336
 
-def video_diff_ratio(src_path, tgt_path):
-    cap1 = cv2.VideoCapture(src_path)
-    cap2 = cv2.VideoCapture(tgt_path)
-    total_pixels = 0
-    diff_pixels = 0
-    while True:
-        ret1, frame1 = cap1.read()
-        ret2, frame2 = cap2.read()
-        if not ret1 or not ret2:
-            break
-        diff = cv2.absdiff(frame1, frame2)
-        mask = np.any(diff > 30, axis=2)  # 阈值可调
-        diff_pixels += np.sum(mask)
-        total_pixels += mask.size
-    cap1.release()
-    cap2.release()
-    return diff_pixels / total_pixels if total_pixels else 0
+def is_portrait(video_path):
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        return False
+    w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    cap.release()
+    return h > w
 
 def process_item(item, base_dir):
     src = os.path.join(base_dir, item['source_video_path'])
