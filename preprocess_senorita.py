@@ -25,7 +25,7 @@ BASE_SCRATCH = "/scratch3/yan204/yxp/Senorita"
 PREPROCESS_DIR = BASE_SCRATCH  # where preprocessed data and frame folders live
 
 # Automatically derive paths from TASK_NAME
-INPUT_PATH = os.path.join(PREPROCESS_DIR, f"data_json/updated_data_{TASK_NAME}.json")
+INPUT_PATH = os.path.join(PREPROCESS_DIR, f"updated_data_{TASK_NAME}.json")
 FRAMES_DIR = os.path.join(PREPROCESS_DIR, f"{TASK_NAME}_temp_frames")
 PREPROCESSED_DATA_PATH = os.path.join(PREPROCESS_DIR, f"preprocessed_{TASK_NAME}_data.json")
 
