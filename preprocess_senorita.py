@@ -100,6 +100,9 @@ def process_single_sample_for_frames(args):
     if source_path.startswith("style_transfer/"):
         source_path = source_path.replace("style_transfer/", "style_transfer_upload/", 1)
     
+    print(target_path)
+    print(source_path)
+    exit()
     target_video = os.path.join("/scratch3/yan204/yxp/Senorita", target_path)
     source_video = os.path.join("/scratch3/yan204/yxp/Senorita", source_path)
     
