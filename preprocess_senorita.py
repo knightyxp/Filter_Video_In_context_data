@@ -95,14 +95,11 @@ def process_single_sample_for_frames(args):
     source_path = sample["source_video_path"].lstrip("./")
     
     # Replace style_transfer with style_transfer_upload for actual file location
-    if target_path.startswith("style_transfer/"):
-        target_path = target_path.replace("style_transfer/", "style_transfer_upload/", 1)
-    if source_path.startswith("style_transfer/"):
-        source_path = source_path.replace("style_transfer/", "style_transfer_upload/", 1)
+    if target_path.startswith(f"{TASK_NAME}/"):
+        target_path = target_path.replace(f"{TASK_NAME}/", f"{TASK_NAME}_upload/", 1)
+    if source_path.startswith(f"{TASK_NAME}/"):
+        source_path = source_path.replace(f"{TASK_NAME}/", f"{TASK_NAME}_upload/", 1)
     
-    print(target_path)
-    print(source_path)
-    exit()
     target_video = os.path.join("/scratch3/yan204/yxp/Senorita", target_path)
     source_video = os.path.join("/scratch3/yan204/yxp/Senorita", source_path)
     
