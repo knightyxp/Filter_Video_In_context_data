@@ -11,12 +11,11 @@ import argparse
 # === User-configurable task name ===
 # Just set TASK_NAME to switch between different preprocessing tasks.
 # For example: "obj_swap", "obj_removal", "object_swap", etc.
-parser = argparse.ArgumentParser(description="预处理脚本：按 TASK_NAME 提取帧并生成 VIE 提示")
+parser = argparse.ArgumentParser(description="preprocess senorita data")
 parser.add_argument(
     "--task_name", "-t",
     type=str,
     default="obj_swap",
-    help="任务名称，对应 filtered_<task_name>_592x336.json"
 )
 args = parser.parse_args()
 TASK_NAME = args.task_name
@@ -26,40 +25,23 @@ BASE_SCRATCH = "/scratch3/yan204/yxp/Senorita"
 PREPROCESS_DIR = BASE_SCRATCH  # where preprocessed data and frame folders live
 
 # Automatically derive paths from TASK_NAME
-INPUT_PATH = os.path.join(PREPROCESS_DIR, f"updated_data_{TASK_NAME}.json")
+INPUT_PATH = os.path.join(PREPROCESS_DIR, f"data_json/updated_data_{TASK_NAME}.json")
 FRAMES_DIR = os.path.join(PREPROCESS_DIR, f"{TASK_NAME}_temp_frames")
 PREPROCESSED_DATA_PATH = os.path.join(PREPROCESS_DIR, f"preprocessed_{TASK_NAME}_data.json")
 
 # Ensure frames directory exists
 os.makedirs(FRAMES_DIR, exist_ok=True)
 
-
-def flatten_list(x):
-    """
-    递归展开所有嵌套的 list，返回一个只含基础元素（这里就是 dict）的扁平列表。
-    """
-    if isinstance(x, list):
-        out = []
-        for el in x:
-            out.extend(flatten_list(el))
-        return out
-    else:
-        return [x]
-
 def extract_first_frame(video_path, output_path):
     """Extract the first frame from a video and save as image"""
-    try:
-        cap = cv2.VideoCapture(video_path)
-        ret, frame = cap.read()
-        if ret:
-            cv2.imwrite(output_path, frame)
-            cap.release()
-            return True
+    cap = cv2.VideoCapture(video_path)
+    ret, frame = cap.read()
+    if ret:
+        cv2.imwrite(output_path, frame)
         cap.release()
-        return False
-    except Exception as e:
-        print(f"Error extracting frame from {video_path}: {e}")
-        return False
+        return True
+    cap.release()
+    return False
 
 def create_sc_prompt(instruction, enhanced_instruction):
     """Create Semantic Consistency prompt"""
@@ -108,25 +90,25 @@ def process_single_sample_for_frames(args):
     """Process a single sample - extract frames from videos (for multiprocessing)"""
     idx, sample, frames_dir = args
     
-    # Get absolute paths
-    target_path = os.path.join("/scratch3/yan204/yxp/Senorita", sample["target_video_path"].lstrip("./"))
-    source_path = os.path.join("/scratch3/yan204/yxp/Senorita", sample["source_video_path"].lstrip("./"))
-
-    # Replace style_transfer with style_transfer_upload for actual file location
-    if target_path.startswith(f"{TASK_NAME}/"):
-        target_path = target_path.replace(f"{TASK_NAME}/", f"{TASK_NAME}_upload/", 1)
-    if source_path.startswith(f"{TASK_NAME}/"):
-        source_path = source_path.replace(f"{TASK_NAME}/", f"{TASK_NAME}_upload/", 1)
+    # Get absolute paths and fix path mapping
+    target_path = sample["target_video_path"].lstrip("./")
+    source_path = sample["source_video_path"].lstrip("./")
     
-    target_video = os.path.join("/projects/D2DCRC/xiangpeng/Senorita", target_path)
-    source_video = os.path.join("/projects/D2DCRC/xiangpeng/Senorita", source_path)
-
+    # Replace style_transfer with style_transfer_upload for actual file location
+    if target_path.startswith("style_transfer/"):
+        target_path = target_path.replace("style_transfer/", "style_transfer_upload/", 1)
+    if source_path.startswith("style_transfer/"):
+        source_path = source_path.replace("style_transfer/", "style_transfer_upload/", 1)
+    
+    target_video = os.path.join("/scratch3/yan204/yxp/Senorita", target_path)
+    source_video = os.path.join("/scratch3/yan204/yxp/Senorita", source_path)
+    
     # Check if videos exist
     if not os.path.exists(target_video) or not os.path.exists(source_video):
         return None
     
     # Extract ID information from video path for naming
-    target_parts = sample["target_video_path"].split("/")
+    target_parts = target_path.split("/")
     if len(target_parts) >= 3:
         filename = os.path.splitext(target_parts[-1])[0]
         if filename.endswith("_org"):
@@ -179,7 +161,6 @@ os.makedirs(FRAMES_DIR, exist_ok=True)
 print("Loading filtered data...")
 with open(INPUT_PATH, "r", encoding="utf-8") as f:
     data = json.load(f)
-    data = flatten_list(data)
 
 print(f"Loaded {len(data)} samples")
 
@@ -196,10 +177,14 @@ with ProcessPoolExecutor(max_workers=max_workers) as executor:
     args_list = [(idx, sample, FRAMES_DIR) for idx, sample in enumerate(data)]
     futures = [executor.submit(process_single_sample_for_frames, args) for args in args_list]
     
+    skipped = 0
     for future in tqdm(as_completed(futures), total=len(futures), desc="Processing samples"):
         result = future.result()
         if result is not None:
             valid_results.append(result)
+        else:
+            skipped += 1
+    print(f"Skipped {skipped} samples")
 
 # Sort results by original index to maintain order
 valid_results.sort(key=lambda x: x['idx'])
