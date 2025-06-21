@@ -12,12 +12,12 @@ def extract_tar_gz(tar_path, extract_to=None):
         if extract_to is None:
             extract_to = os.path.dirname(tar_path)
         
-        print(f"Extracting {os.path.basename(tar_path)}...")
+        #print(f"Extracting {os.path.basename(tar_path)}...")
         
         with tarfile.open(tar_path, 'r:gz') as tar:
             tar.extractall(path=extract_to)
         
-        print(f"✓ Finished extracting {os.path.basename(tar_path)}")
+        #print(f"✓ Finished extracting {os.path.basename(tar_path)}")
         return True
         
     except Exception as e:
@@ -25,19 +25,19 @@ def extract_tar_gz(tar_path, extract_to=None):
         return False
 
 def process_directory(directory_path, max_workers=4):
-    """Process all tar.gz files in a directory using multi-threading"""
+    """Process all tar.gz files in a directory and all subdirectories using multi-threading"""
     if not os.path.exists(directory_path):
         print(f"Directory {directory_path} does not exist, skipping.")
         return 0, 0
     
-    # Find all tar.gz files in the directory
-    tar_files = glob.glob(os.path.join(directory_path, "*.tar.gz"))
+    # Find all tar.gz files in the directory and all subdirectories recursively
+    tar_files = glob.glob(os.path.join(directory_path, "**", "*.tar.gz"), recursive=True)
     
     if not tar_files:
-        print(f"No tar.gz files found in {directory_path}")
+        print(f"No tar.gz files found in {directory_path} (including subdirectories)")
         return 0, 0
     
-    print(f"Found {len(tar_files)} tar.gz files in {directory_path}")
+    print(f"Found {len(tar_files)} tar.gz files in {directory_path} (including subdirectories)")
     
     # Extract files in parallel
     success_count = 0
@@ -72,15 +72,8 @@ def main():
     
     # Define all directories to process
     directories = [
-        "local_style_transfer_upload",
-        "outpainting", 
-        "controlable_videos_upload",
-        "obj_removal_videos_upload",
-        "style_transfer_upload",
-        "grounding_upload",
-        "obj_removal_videos_upload2",
+        "outpainting",
         "inpainting_upload",
-        "obj_swap_upload"
     ]
     
     print(f"Processing {len(directories)} directories...")
@@ -103,7 +96,7 @@ def main():
                 success, total = future.result()
                 total_success += success
                 total_files += total
-                print(f"✓ Completed {directory}: {success}/{total} files")
+                #print(f"✓ Completed {directory}: {success}/{total} files")
             except Exception as e:
                 print(f"✗ Error processing directory {directory}: {e}")
     
