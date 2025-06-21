@@ -111,7 +111,16 @@ def process_single_sample_for_frames(args):
     # Get absolute paths
     target_video = os.path.join("/scratch3/yan204/yxp/Senorita", sample["target_video_path"].lstrip("./"))
     source_video = os.path.join("/scratch3/yan204/yxp/Senorita", sample["source_video_path"].lstrip("./"))
+
+    # Replace style_transfer with style_transfer_upload for actual file location
+    if target_path.startswith(f"{TASK_NAME}/"):
+        target_path = target_path.replace(f"{TASK_NAME}/", f"{TASK_NAME}_upload/", 1)
+    if source_path.startswith(f"{TASK_NAME}/"):
+        source_path = source_path.replace(f"{TASK_NAME}/", f"{TASK_NAME}_upload/", 1)
     
+    target_video = os.path.join("/projects/D2DCRC/xiangpeng/Senorita", target_path)
+    source_video = os.path.join("/projects/D2DCRC/xiangpeng/Senorita", source_path)
+
     # Check if videos exist
     if not os.path.exists(target_video) or not os.path.exists(source_video):
         return None
