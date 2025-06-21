@@ -109,8 +109,8 @@ def process_single_sample_for_frames(args):
     idx, sample, frames_dir = args
     
     # Get absolute paths
-    target_video = os.path.join("/scratch3/yan204/yxp/Senorita", sample["target_video_path"].lstrip("./"))
-    source_video = os.path.join("/scratch3/yan204/yxp/Senorita", sample["source_video_path"].lstrip("./"))
+    target_path = os.path.join("/scratch3/yan204/yxp/Senorita", sample["target_video_path"].lstrip("./"))
+    source_path = os.path.join("/scratch3/yan204/yxp/Senorita", sample["source_video_path"].lstrip("./"))
 
     # Replace style_transfer with style_transfer_upload for actual file location
     if target_path.startswith(f"{TASK_NAME}/"):
