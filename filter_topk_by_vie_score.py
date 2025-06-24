@@ -39,7 +39,6 @@ def main():
     )
     out_path   = os.path.join(
         args.base_dir,
-        "data_json",
         f"clean_top{args.top_k}_{args.task_name}.json"
     )
 
