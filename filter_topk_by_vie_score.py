@@ -73,12 +73,13 @@ def main():
     # 4. 匹配抽取
     clean_list = []
     for s in top_samples:
-        key = (
-            os.path.basename(s.get("source_video_path","")),
-            os.path.basename(s.get("target_video_path",""))
-        )
+        src_path = s.get("source_video_path", "")
+        tgt_path = s.get("target_video_path", "")
+        key = (os.path.basename(src_path), os.path.basename(tgt_path))
         entry = orig_map.get(key)
         if entry:
+            entry["source_video_path"] = src_path
+            entry["target_video_path"] = tgt_path
             clean_list.append(entry)
         else:
             # 如果匹配不到，可根据需要打印或记录日志
