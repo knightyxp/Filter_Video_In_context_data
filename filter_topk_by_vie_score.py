@@ -35,7 +35,6 @@ def main():
     score_path = os.path.join(args.base_dir, f"vie_score_{args.task_name}.json")
     orig_path  = os.path.join(
         args.base_dir,
-        "data_json",
         f"updated_data_{args.task_name}_videos.json"
     )
     out_path   = os.path.join(
