@@ -35,7 +35,7 @@ def main():
     score_path = os.path.join(args.base_dir, f"vie_score_{args.task_name}.json")
     orig_path  = os.path.join(
         args.base_dir,
-        f"updated_data_{args.task_name}.json"
+        f"updated_data_{args.task_name}_upload.json"
     )
     out_path   = os.path.join(
         args.base_dir,
@@ -75,6 +75,10 @@ def main():
     for s in top_samples:
         src_path = s.get("source_video_path", "")
         tgt_path = s.get("target_video_path", "")
+        if src_path.startswith('.//inpainting'):
+            src_path = src_path.replace('.//inpainting', './inpainting', 1)
+        if tgt_path.startswith('.//inpainting'):
+            tgt_path = tgt_path.replace('.//inpainting', './inpainting', 1)
         key = (os.path.basename(src_path), os.path.basename(tgt_path))
         entry = orig_map.get(key)
         if entry:
